@@ -1,2 +1,11 @@
 ---
 # tasks file for ansible-vmware_update_manager
+- vmware_baseline_info:
+    hostname: "{{ vcenter_hostname }}"
+    username: "{{ vcenter_username }}"
+    password: "{{ vcenter_password }}"
+    validate_certs: no
+  register: r
+
+- debug:
+    msg: "{{ r }}"
