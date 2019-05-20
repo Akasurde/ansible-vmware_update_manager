@@ -67,9 +67,8 @@ options:
       required: False
     entity:
       description:
-      - Specify entity objects to which the baselines you want to retrieve are attached.
+      - Specify entity object to which the baselines you want to retrieve are attached.
       type: str
-      choices: [ Template, VirtualMachine, VMHost, Cluster, Datacenter, Folder, VApp ]
       required: False
     baseline_id:
       description:
@@ -106,7 +105,7 @@ EXAMPLES = r'''
 RETURN = r'''
 baseline_info:
     description: metadata about the baseline information
-    returned: on successful addition
+    returned: always
     type: complex
     sample: [
             {

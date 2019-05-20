@@ -16,13 +16,9 @@ $spec = @{
         password = @{ type='str'; }
         port = @{ type='str'; default = 443; }
         validate_certs = @{ type='str'; default = $true }
-        target_type = @{ type='str'; choices = "VM", "Host", "VA"; }
-        baseline_type = @{ type='str'; choices = "Patch", "Upgrade"; }
-        baseline_content_type = @{ type='str'; choices = "Dynamic", "Static", "Both"; }
+        compliance_status = @{ type='str'; choices = "Compliant", "NotCompliant", "Unknown", "Incompatible"; }
         entity = @{ type='str'; }
-        baseline_id = @{ type='int'; }
-        inherit = @{ type='bool'; }
-        recurse = @{ type='bool'; }
+        detailed = @{ type='bool'; }
     }
     supports_check_mode = $true
 }
@@ -33,15 +29,12 @@ $module = [Ansible.Basic.AnsibleModule]::Create($args, $spec)
 $hostname = $module.Params.hostname
 $username = $module.Params.username
 $password = $module.Params.password
-$validate_certs = $module.Params.validate_certs
 $port = $module.Params.port
-$target_type = $module.params.target_type
-$baseline_type = $module.params.baseline_type
-$baseline_content_type = $module.params.baseline_content_type
-$entity = $module.params.entity
-$baseline_id = $module.params.baseline_id
-$inherit = $module.params.inherit
-$recurse = $module.params.recurse
+$validate_certs = $module.Params.validate_certs
+
+$entity = $module.Params.entity
+$compliance_status = $module.Params.compliance_status
+$detailed = $module.Params.detailed
 
 if (-not $hostname) {
     $hostname = [Environment]::GetEnvironmentVariable('VMWARE_HOST')
@@ -82,54 +75,33 @@ $module.Result.rc = 0
 
 Connect-VIServer $hostname -User $username -Password $password -Port $port
 
-$baseline_params = @{}
+$compliances_params = @{}
 
 if ($entity) {
-    $baseline_params.Entity = $entity
+    $compliances_params.Entity = $entity
 }
 
-if ($target_type) {
-    $baseline_params.TargetType = $target_type
+if ($compliance_status) {
+    $compliances_params.ComplianceStatus = $compliance_status
 }
 
-if ($baseline_type) {
-    $baseline_params.BaselineType = $baseline_type
+if ($detailed) {
+    $compliances_params.Detailed
 }
 
-if ($baseline_content_type) {
-    $baseline_params.BaselineContentType = $baseline_content_type
-}
+$Compliances = Get-Compliance @compliances_params
 
-if ($baseline_id) {
-    $baseline_params.Id = $baseline_id
-}
+$module.Result.compliance_info = [System.Collections.ArrayList]@()
 
-if ($inherit) {
-    $baseline_params.Inherit
-}
-
-if ($recurse) {
-    $baseline_params.Recurse
-}
-
-$Baselines = Get-Baseline @baseline_params
-
-$module.Result.baseline_info = [System.Collections.ArrayList]@()
-
-foreach ($Baseline in $Baselines) {
-    $baseline_info = @{
-        name = $Baseline.Name
-        description = $Baseline.Description
-        id = $Baseline.Id
-        target_type = $Baseline.TargetType
-        baseline_content_type = $Baseline.BaselineContentType
-        baseline_type = $Baseline.BaselineType
-        is_system_defined = $Baseline.IsSystemDefined
-        target_component = $Baseline.TargetComponent
-        current_patches = $Baseline.CurrentPatches
+foreach ($Compliance in $Compliances) {
+    $compliance_info = @{
+        status = $Compliance.Status
+        baseline_name = $Compliance.Baseline.name
+        baseline_description = $Compliance.Baseline.description
+        baseline_type = $Compliance.Baseline.BaselineType
     }
 
-    $module.Result.baseline_info.Add($baseline_info) > $null
+    $module.Result.compliance_info.Add($compliance_info) > $null
 }
 
 $module.Result.changed = $false
